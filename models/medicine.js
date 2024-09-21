@@ -19,7 +19,35 @@ const medicineSchema = new mongoose.Schema({
         type: Date,
         required: [true, 'Please provide an expiry date'],
     },
-    createdAt: { type: Date, default: Date.now },
+    stockThreshold: {
+        type: Number,
+        default: 10, // Example: alert if stock falls below 10 units
+    },
+    pharmacyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
+    createdAt: { 
+        type: Date, 
+        default: Date.now 
+    },
+    lastPriceUpdate: {
+        type: Date,
+        default: Date.now,  // Tracks the last time the price was updated
+    },
+});
+
+// Middleware for price updates - Ensures uniform pricing across pharmacies
+medicineSchema.pre('save', async function (next) {
+    if (this.isModified('price')) {
+        // Logic to sync the price across all pharmacies with this medicine
+        await Medicine.updateMany(
+            { name: this.name },  // Update all medicines with the same name
+            { price: this.price, lastPriceUpdate: Date.now() }
+        );
+    }
+    next();
 });
 
 const Medicine = mongoose.model('Medicine', medicineSchema);

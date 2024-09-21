@@ -1,100 +1,138 @@
 const Medicine = require('../models/medicine');
+const { notifyPharmacists } = require('../services/pushService');
 
-// Fetch all medicines
-exports.getMedicines = async (req, res) => {
-    try {
-        const medicines = await Medicine.find(); 
-        res.json(medicines); 
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// Create a new medicine
+// Create Medicine and Send Notifications if Stock Low or Expiry Near
 exports.createMedicine = async (req, res) => {
-    const { name, quantity, price, expiryDate } = req.body; 
+    const { name, quantity, price, expiryDate } = req.body;
+    const pharmacyId = req.user._id;
 
     const newMedicine = new Medicine({
         name,
         quantity,
         price,
         expiryDate,
+        pharmacyId,
     });
 
     try {
-       
         const savedMedicine = await newMedicine.save();
-        res.status(201).json(savedMedicine); 
+
+        // Notify pharmacists if stock is low
+        if (quantity < 5) {
+            notifyPharmacists({
+                title: 'Stock Alert',
+                message: `${name} is running low on stock at your pharmacy.`,
+            });
+        }
+
+        // Notify pharmacists if expiry date is near (within 30 days)
+        const expiryThreshold = new Date();
+        expiryThreshold.setDate(expiryThreshold.getDate() + 30);
+        if (new Date(expiryDate) < expiryThreshold) {
+            notifyPharmacists({
+                title: 'Expiry Alert',
+                message: `${name} is expiring soon at your pharmacy.`,
+            });
+        }
+
+        res.status(201).json(savedMedicine);
     } catch (error) {
-        res.status(400).json({ message: error.message }); 
+        res.status(400).json({ message: error.message });
     }
 };
-exports.searchMedicines = async (req, res) => {
-    const { searchTerm, expiryDate } = req.query;
 
+// Update Medicine and Send Notifications if Stock Low or Expiry Near
+exports.updateMedicine = async (req, res) => {
+    const { name, quantity, price, expiryDate } = req.body;
+    const { id } = req.params;  // Medicine ID
+
+    try {
+        const updatedMedicine = await Medicine.findByIdAndUpdate(id, {
+            name, quantity, price, expiryDate
+        }, { new: true });
+
+        // Notify pharmacists if stock is low
+        if (quantity < 5) {
+            notifyPharmacists({
+                title: 'Stock Alert',
+                message: `${name} is running low on stock at your pharmacy.`,
+            });
+        }
+
+        // Notify pharmacists if expiry date is near (within 30 days)
+        const expiryThreshold = new Date();
+        expiryThreshold.setDate(expiryThreshold.getDate() + 30);
+        if (new Date(expiryDate) < expiryThreshold) {
+            notifyPharmacists({
+                title: 'Expiry Alert',
+                message: `${name} is expiring soon at your pharmacy.`,
+            });
+        }
+
+        res.status(200).json(updatedMedicine);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+// Get all medicines (optional for fetching all medicines)
+exports.getMedicines = async (req, res) => {
+    try {
+        const medicines = await Medicine.find({ pharmacyId: req.user._id });
+        res.status(200).json(medicines);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+// Delete medicine
+exports.deleteMedicine = async (req, res) => {
+    const { id } = req.params;  // Medicine ID
+
+    try {
+        await Medicine.findByIdAndDelete(id);
+        res.status(204).json({ message: 'Medicine deleted successfully' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+
+exports.searchMedicines = async (req, res) => {
+    const { searchTerm, expiryDate } = req.query; // No pharmacyId in the query
+    
     try {
         const query = {};
 
+        // Add search term filter (case-insensitive)
         if (searchTerm) {
-            query.name = { $regex: searchTerm, $options: 'i' };
+            query.name = { $regex: searchTerm, $options: 'i' }; // Case-insensitive search
         }
 
+        // Add expiry date filter
         if (expiryDate) {
             const expiry = new Date(expiryDate);
             if (!isNaN(expiry.getTime())) {
-                query.expiryDate = { $gte: expiry };
+                query.expiryDate = { $gte: expiry }; // Medicines expiring after or on the specified date
+            } else {
+                return res.status(400).json({ message: 'Invalid expiry date format' });
             }
         }
 
-        const medicines = await Medicine.find(query);
-        res.json(medicines);
+        // Fetch medicines based on the constructed query
+        const medicines = await Medicine.find(query).populate('pharmacyId', 'pharmacyName'); // Fetch all medicines
+        res.status(200).json(medicines);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
 
-
-// Update a specific medicine by ID
-exports.updateMedicineById = async (req, res) => {
-    const { id } = req.params;
-    const { name, quantity, price, expiryDate } = req.body;
-
+exports.getAllMedicines = async (req, res) => {
     try {
-        // Build the update object dynamically based on what fields are provided
-        const updateFields = {};
-
-        if (name) {
-            updateFields.name = name;
-        }
-
-        if (quantity !== undefined) {
-            updateFields.quantity = quantity;
-        }
-
-        if (price !== undefined) {
-            updateFields.price = price;
-        }
-
-        if (expiryDate) {
-            updateFields.expiryDate = new Date(expiryDate);
-        }
-
-        // Ensure at least one field is being updated
-        if (Object.keys(updateFields).length === 0) {
-            return res.status(400).json({ message: "No fields to update" });
-        }
-
-        
-        const result = await Medicine.updateOne({ _id: id }, { $set: updateFields });
-
-        if (result.matchedCount === 0) {
-            return res.status(404).json({ message: "Medicine not found" });
-        }
-
-        res.json({ message: 'Medicine updated successfully', result });
+        const medicines = await Medicine.find(); // Fetch all medicines
+        res.status(200).json(medicines);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(400).json({ message: error.message });
     }
 };
-

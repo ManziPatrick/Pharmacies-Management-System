@@ -1,14 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const medicineController = require('../controllers/medicineController');
+const protect = require('../middleware/authMiddleware');  // Ensure the path is correct
 
-router.get('/', medicineController.searchMedicines);
+// Create a new medicine
+router.post('/', protect, medicineController.createMedicine);
 
-router.get('/', medicineController.getMedicines);
+// Update an existing medicine by ID
+router.put('/:id', protect, medicineController.updateMedicine);
 
-router.post('/', medicineController.createMedicine);
+router.get('/', protect, medicineController.getMedicines);
+router.get('/all', medicineController.getAllMedicines);
 
-router.put('/:id', medicineController.updateMedicineById);
+router.delete('/:id', protect, medicineController.deleteMedicine);
+router.get('/search', protect, medicineController.searchMedicines);
 
-module.exports = router; 
-
+module.exports = router;

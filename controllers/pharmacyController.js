@@ -32,6 +32,7 @@ exports.createPharmacy = async (req, res) => {
   }
 };
 
+
 exports.updatePharmacy = async (req, res) => {
   try {
     const pharmacy = await Pharmacy.findById(req.params.id);
