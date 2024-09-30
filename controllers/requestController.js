@@ -1,7 +1,7 @@
 const User = require('../models/user');
-const logger = require('../utils/logger'); // Assume you have a logger utility
+const logger = require('../utils/logger'); 
 
-// Fetch requests for a specific pharmacy
+
 exports.getPharmacyRequests = async (req, res) => {
     const { id } = req.params;
 
@@ -33,7 +33,6 @@ exports.getPharmacyRequests = async (req, res) => {
     }
 };
 
-// Fetch all requests across all pharmacies
 exports.getRequests = async (req, res) => {
     logger.info(`Fetching all requests across pharmacies`);
     try {
@@ -110,37 +109,50 @@ exports.createRequest = async (req, res) => {
     }
 };
 
-// Update request status
 exports.updateRequestStatus = async (req, res) => {
     const { pharmacyId, requestId } = req.params;
     const { status } = req.body;
 
     logger.info(`Updating request ID: ${requestId} to status: ${status} for pharmacy ID: ${pharmacyId}`);
+
+    // Ensure the status is valid
     if (!['Pending', 'Fulfilled', 'Rejected'].includes(status)) {
         logger.warn(`Invalid status: ${status}`);
         return res.status(400).json({ message: 'Invalid status' });
     }
 
     try {
-        const user = await User.findOne({ _id: pharmacyId, 'requestsInitiated._id': requestId })
-            .populate({ path: 'requestsInitiated.medicine_id', select: 'name price quantity' });
+        // Find the pharmacy by its ID and check if the request exists in the requestsReceived array
+        const user = await User.findOne({ _id: pharmacyId, 'requestsReceived._id': requestId });
 
         if (!user) {
-            logger.warn(`Request not found for ID: ${requestId}`);
+            logger.warn(`Request not found for ID: ${requestId} in pharmacy ID: ${pharmacyId}`);
             return res.status(404).json({ message: 'Request not found' });
         }
 
-        const request = user.requestsInitiated.id(requestId);
+        // Find the specific request in the requestsReceived array
+        const request = user.requestsReceived.id(requestId);
+
+        if (!request) {
+            logger.warn(`Request with ID: ${requestId} not found in requestsReceived array`);
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        // Update the status of the request
         request.status = status;
+        request.updatedAt = new Date();
+
+        // Save the updated pharmacy document
         await user.save();
 
+        // Emit a real-time update to the requesting pharmacy
         req.io.emit('updateRequest', request);
         req.io.to(request.requesting_pharmacy_id).emit('notification', {
             message: `Your request for medicine ID: ${request.medicine_id} has been updated to ${status}`,
             request: request
         });
 
-        logger.info(`Request status updated: ${requestId} to ${status}`);
+        logger.info(`Request status updated successfully: ${requestId} to ${status}`);
         res.json(request);
     } catch (error) {
         logger.error(`Error updating request status: ${error.message}`);
@@ -148,7 +160,8 @@ exports.updateRequestStatus = async (req, res) => {
     }
 };
 
-// Get requests related to a specific pharmacy ID
+
+
 exports.getRequestsByPharmacyId = async (req, res) => {
     const { pharmacyId } = req.params;
 

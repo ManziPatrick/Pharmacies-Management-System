@@ -1,11 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const  registerPharmacy = require('../controllers/userController'); // Ensure proper import
-const protect = require('../middleware/authMiddleware');
+const { 
+    registerPharmacy, 
+    loginPharmacy, 
+    getUserById, 
+    getAllUsers 
+} = require('../controllers/userController');
 
-router.post('/register', registerPharmacy.registerPharmacy);
+// Register a new pharmacy
+router.post('/register', registerPharmacy);
 
-router.post('/login', registerPharmacy.loginPharmacy);
-router.get('/:id', registerPharmacy.getUserById);
-router.get('/', protect, registerPharmacy.getAllUsers);
+router.post('/login', loginPharmacy);
+
+// Get user by ID
+router.get('/:id', getUserById);
+
+
+router.get('/', getAllUsers);
+
 module.exports = router;

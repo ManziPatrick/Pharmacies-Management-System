@@ -84,20 +84,27 @@ const userSchema = new mongoose.Schema({
         default: Date.now,
     },
     // Arrays for requests
-    requestsInitiated: [requestSchema], // Requests initiated by this pharmacy
-    requestsReceived: [requestSchema] // Requests received by this pharmacy
+    requestsInitiated: [requestSchema], 
+    requestsReceived: [requestSchema] 
 });
 
 // Hash the password before saving the user
 userSchema.pre('save', async function (next) {
+    console.log('Pre-save middleware triggered');
     if (!this.isModified('password')) {
         return next();
     }
 
+    console.log('Original password:', this.password); 
+
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
+
+    console.log('Hashed password:', this.password); 
+
     next();
 });
+
 
 // Method to match password
 userSchema.methods.matchPassword = async function (password) {

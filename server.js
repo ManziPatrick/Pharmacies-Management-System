@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const medicineRoutes = require('./routes/medicineRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const requestRoutes = require('./routes/requestRoutes');
 const notify = require('./routes/notification');
@@ -17,7 +18,7 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(morgan('dev')); // Logging middleware
+app.use(morgan('dev')); 
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -34,6 +35,7 @@ app.use((req, res, next) => {
 
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories',categoryRoutes);
 app.use('/api/requests', requestRoutes); 
 app.use('/api/notify', notify); 
 

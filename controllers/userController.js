@@ -2,14 +2,17 @@ const User = require('../models/user');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcryptjs');
 
-// Register a pharmacy
+
 exports.registerPharmacy = async (req, res) => {
-    const { pharmacyName, location, phoneNumber, ownerName, licenseNumber, email, password, latitude, longitude } = req.body;
+    let { pharmacyName, location, phoneNumber, ownerName, licenseNumber, email, password, latitude, longitude } = req.body;
+
+    
+    
 
     try {
         console.log('Attempting to register user with email:', email);
 
-        // Check if user already exists
+        
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: 'Pharmacy already registered' });
@@ -23,7 +26,7 @@ exports.registerPharmacy = async (req, res) => {
             ownerName,
             licenseNumber,
             email,
-            password,
+            password, 
             latitude,
             longitude
         });
@@ -35,7 +38,7 @@ exports.registerPharmacy = async (req, res) => {
                 _id: user._id,
                 pharmacyName: user.pharmacyName,
                 email: user.email,
-                token: generateToken(user._id)
+                token: generateToken(user._id) // Pass user._id
             });
         } else {
             res.status(400).json({ message: 'Invalid user data' });
@@ -46,10 +49,11 @@ exports.registerPharmacy = async (req, res) => {
     }
 };
 
-// Login a pharmacy
+
+
 exports.loginPharmacy = async (req, res) => {
     const { email, password } = req.body;
-    
+
     console.log('Attempting to login with email:', email);
 
     try {
@@ -63,14 +67,14 @@ exports.loginPharmacy = async (req, res) => {
         }
 
         // Check if password matches
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await user.matchPassword(password);  // Use the matchPassword method
 
         if (isMatch) {
             res.json({
                 _id: user._id,
                 pharmacyName: user.pharmacyName,
                 email: user.email,
-                token: generateToken(user)
+                token: generateToken(user)  
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
@@ -81,7 +85,7 @@ exports.loginPharmacy = async (req, res) => {
     }
 };
 
-// Get user (pharmacy) by ID, separating requesting and requested data
+
 exports.getUserById = async (req, res) => {
     const { id } = req.params;
 
