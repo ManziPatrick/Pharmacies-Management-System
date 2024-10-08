@@ -22,6 +22,7 @@ router.delete('/:id', protect, authorize('pharmacist'), medicineController.delet
 router.get('/search', medicineController.searchMedicines);
 router.get('/all', medicineController.getAllMedicines);
 router.get('/by-category', medicineController.getMedicinesByCategories);
+router.get('/pharmacies/:pharmacyId/medicines', medicineController.getAllMedicinesByPharmacyId);
 router.get('/category/:categoryId', medicineController.getMedicinesByCategoryId);
 
 module.exports = router;

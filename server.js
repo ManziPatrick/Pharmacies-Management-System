@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const chatRoutes = require('./routes/chatRoutes');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
@@ -28,11 +29,23 @@ const io = new Server(server, {
   }
 });
 
-app.use((req, res, next) => {
-  req.io = io;  
-  next();
+io.on('connection', (socket) => {
+  console.log('A user connected: ', socket.id);
+
+  socket.on('sendMessage', (data) => {
+    io.to(data.receiverId).emit('receiveMessage', data);
+  });
+
+  socket.on('joinChat', (room) => {
+    socket.join(room);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected: ', socket.id);
+  });
 });
 
+app.use('/api/chat', chatRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories',categoryRoutes);
@@ -47,7 +60,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down server...');
   server.close(() => {

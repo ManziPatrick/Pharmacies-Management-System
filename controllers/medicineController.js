@@ -364,3 +364,27 @@ exports.getMedicineById = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
+exports.getAllMedicinesByPharmacyId = async (req, res) => {
+    const { pharmacyId } = req.params; 
+
+    if (!mongoose.Types.ObjectId.isValid(pharmacyId)) {
+        return res.status(400).json({ message: 'Invalid pharmacy ID format.' });
+    }
+
+    try {
+        const medicines = await Medicine.find({ pharmacyId }) 
+            .populate('category', 'name description')
+            .populate('pharmacyId', 'pharmacyName location'); 
+
+        if (!medicines || medicines.length === 0) {
+            return res.status(404).json({ message: 'No medicines found for this pharmacy.' });
+        }
+
+        res.status(200).json(medicines);
+    } catch (error) {
+        console.error('Error fetching medicines by pharmacy ID:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+

@@ -4,15 +4,14 @@ const {
     registerPharmacy, 
     loginPharmacy, 
     getUserById, 
-    getAllUsers 
+    getAllUsers, 
+    getNearbyPharmacies
 } = require('../controllers/userController');
-
-// Register a new pharmacy
+router.get('/nearby', getNearbyPharmacies);
 router.post('/register', registerPharmacy);
 
 router.post('/login', loginPharmacy);
 
-// Get user by ID
 router.get('/:id', getUserById);
 
 
