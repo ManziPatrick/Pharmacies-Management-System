@@ -2,7 +2,7 @@ const User = require('../models/user');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcryptjs');
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Radius of the Earth in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     
@@ -134,7 +134,7 @@ exports.getUserById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Find the pharmacy by ID and populate the medicine details in requests
+       
         const user = await User.findById(id)
             .populate({
                 path: 'requestsInitiated.medicine_id',

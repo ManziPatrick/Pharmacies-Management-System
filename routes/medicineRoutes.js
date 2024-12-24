@@ -17,7 +17,7 @@ router.post('/', protect, upload.array('images', 5), (req, res, next) => {
 
 router.put('/:id', protect, authorize('pharmacist'), medicineController.updateMedicine);
 router.get('/one/:id', medicineController.getMedicineById);
-router.get('/', protect, medicineController.getMedicines);
+router.get('/', medicineController.getMedicines);
 router.delete('/:id', protect, authorize('pharmacist'), medicineController.deleteMedicine);
 router.get('/search', medicineController.searchMedicines);
 router.get('/all', medicineController.getAllMedicines);

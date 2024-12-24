@@ -8,6 +8,7 @@ const medicineRoutes = require('./routes/medicineRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const requestRoutes = require('./routes/requestRoutes');
+const contactUs = require('./routes/contactus')
 const notify = require('./routes/notification');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -119,6 +120,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/requests', requestRoutes); 
 app.use('/api/notify', notify); 
+app.use('/api/contactus', contactUs); 
 
 process.on('SIGINT', () => {
   console.log('Shutting down server...');

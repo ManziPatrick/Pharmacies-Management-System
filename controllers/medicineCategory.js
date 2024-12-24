@@ -5,18 +5,16 @@ exports.createCategory = async (req, res) => {
     const { name, description } = req.body;
 
     try {
-        // Validate input
+      
         if (!name) {
             return res.status(400).json({ message: 'Category name is required' });
         }
 
-        // Check if category already exists
         const existingCategory = await MedicineCategory.findOne({ name: name.trim() });
         if (existingCategory) {
             return res.status(400).json({ message: 'Category already exists' });
         }
 
-        // Create and save new category
         const category = new MedicineCategory({ name: name.trim(), description });
         const savedCategory = await category.save();
         res.status(201).json(savedCategory);
