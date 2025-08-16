@@ -115,10 +115,38 @@ exports.updateRequestStatus = async (req, res) => {
 
     logger.info(`Updating request ID: ${requestId} to status: ${status} for pharmacy ID: ${pharmacyId}`);
 
+    // Validate input parameters
+    if (!pharmacyId) {
+        logger.warn('Pharmacy ID is missing');
+        return res.status(400).json({ message: 'Pharmacy ID is required' });
+    }
+
+    if (!requestId) {
+        logger.warn('Request ID is missing');
+        return res.status(400).json({ message: 'Request ID is required' });
+    }
+
+    if (!status) {
+        logger.warn('Status is missing');
+        return res.status(400).json({ message: 'Status is required' });
+    }
+
+    // Validate ObjectId format
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(pharmacyId)) {
+        logger.warn(`Invalid pharmacy ID format: ${pharmacyId}`);
+        return res.status(400).json({ message: 'Invalid pharmacy ID format' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+        logger.warn(`Invalid request ID format: ${requestId}`);
+        return res.status(400).json({ message: 'Invalid request ID format' });
+    }
+
     // Ensure the status is valid
     if (!['Pending', 'Fulfilled', 'Rejected'].includes(status)) {
         logger.warn(`Invalid status: ${status}`);
-        return res.status(400).json({ message: 'Invalid status' });
+        return res.status(400).json({ message: 'Invalid status. Must be Pending, Fulfilled, or Rejected' });
     }
 
     try {
@@ -127,7 +155,7 @@ exports.updateRequestStatus = async (req, res) => {
 
         if (!user) {
             logger.warn(`Request not found for ID: ${requestId} in pharmacy ID: ${pharmacyId}`);
-            return res.status(404).json({ message: 'Request not found' });
+            return res.status(404).json({ message: 'Request not found or you do not have permission to update this request' });
         }
 
         // Find the specific request in the requestsReceived array
@@ -135,7 +163,7 @@ exports.updateRequestStatus = async (req, res) => {
 
         if (!request) {
             logger.warn(`Request with ID: ${requestId} not found in requestsReceived array`);
-            return res.status(404).json({ message: 'Request not found' });
+            return res.status(404).json({ message: 'Request not found in your received requests' });
         }
 
         // Update the status of the request
@@ -145,18 +173,39 @@ exports.updateRequestStatus = async (req, res) => {
         // Save the updated pharmacy document
         await user.save();
 
+        // Also update the same request in the requesting pharmacy's requestsInitiated array
+        try {
+            const requestingPharmacy = await User.findOne({ 
+                _id: request.requesting_pharmacy_id, 
+                'requestsInitiated._id': requestId 
+            });
+            
+            if (requestingPharmacy) {
+                const initiatedRequest = requestingPharmacy.requestsInitiated.id(requestId);
+                if (initiatedRequest) {
+                    initiatedRequest.status = status;
+                    initiatedRequest.updatedAt = new Date();
+                    await requestingPharmacy.save();
+                }
+            }
+        } catch (syncError) {
+            logger.warn(`Failed to sync status with requesting pharmacy: ${syncError.message}`);
+        }
+
         // Emit a real-time update to the requesting pharmacy
-        req.io.emit('updateRequest', request);
-        req.io.to(request.requesting_pharmacy_id).emit('notification', {
-            message: `Your request for medicine ID: ${request.medicine_id} has been updated to ${status}`,
-            request: request
-        });
+        if (req.io) {
+            req.io.emit('updateRequest', request);
+            req.io.to(request.requesting_pharmacy_id).emit('notification', {
+                message: `Your request for medicine ID: ${request.medicine_id} has been updated to ${status}`,
+                request: request
+            });
+        }
 
         logger.info(`Request status updated successfully: ${requestId} to ${status}`);
         res.json(request);
     } catch (error) {
         logger.error(`Error updating request status: ${error.message}`);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: `Failed to update request status: ${error.message}` });
     }
 };
 

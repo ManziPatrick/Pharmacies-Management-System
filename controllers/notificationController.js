@@ -127,11 +127,16 @@ exports.notifyNewMedicine = async (medicine, io) => {
 
 // Fetch notifications for a user
 exports.getNotifications = async (req, res) => {
-    const userId = req.query.userId;
+    // Try to get userId from token first, then from query parameter
+    let userId = getUserIdFromToken(req);
+    if (!userId) {
+        userId = req.query.userId;
+    }
+    
     console.log('Fetching notifications for userId:', userId);
 
     if (!userId) {
-        return res.status(403).json({ message: 'No userId provided' });
+        return res.status(403).json({ message: 'No userId provided or invalid token' });
     }
 
     try {
